@@ -56,9 +56,7 @@ export async function run(): Promise<void> {
 		} else if (inputs.baselineFrom) {
 			const octokit = github.getOctokit(inputs.githubToken);
 			const { owner, repo } = github.context.repo;
-			core.info(
-				`Fetching baseline from branch: ${inputs.baselineFrom}`,
-			);
+			core.info(`Fetching baseline from branch: ${inputs.baselineFrom}`);
 			const baselineContent = await fetchBaseline(
 				octokit,
 				owner,
@@ -128,9 +126,7 @@ export async function run(): Promise<void> {
 		if (inputs.saveBaseline) {
 			const octokit = github.getOctokit(inputs.githubToken);
 			const { owner, repo } = github.context.repo;
-			core.info(
-				`Saving baseline to branch: ${inputs.saveBaseline}`,
-			);
+			core.info(`Saving baseline to branch: ${inputs.saveBaseline}`);
 			await saveBaseline(
 				octokit,
 				owner,

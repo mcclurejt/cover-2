@@ -20,9 +20,7 @@ function createMockOctokit({
 		if (getBranchError) return Promise.reject(getBranchError);
 		return Promise.resolve({ data: { name: "coverage-baseline" } });
 	});
-	const createTree = mock(() =>
-		Promise.resolve({ data: { sha: "tree-sha" } }),
-	);
+	const createTree = mock(() => Promise.resolve({ data: { sha: "tree-sha" } }));
 	const createCommit = mock(() =>
 		Promise.resolve({ data: { sha: "commit-sha" } }),
 	);
@@ -136,10 +134,10 @@ describe("saveBaseline", () => {
 			"new content",
 		);
 
-		expect(
-			octokit._mocks.createOrUpdateFileContents,
-		).toHaveBeenCalledTimes(1);
-		const call = (octokit._mocks.createOrUpdateFileContents as ReturnType<typeof mock>).mock.calls[0] as unknown[];
+		expect(octokit._mocks.createOrUpdateFileContents).toHaveBeenCalledTimes(1);
+		const call = (
+			octokit._mocks.createOrUpdateFileContents as ReturnType<typeof mock>
+		).mock.calls[0] as unknown[];
 		const args = call[0] as Record<string, unknown>;
 		expect(args.sha).toBe("old-sha");
 		expect(args.branch).toBe("coverage-baseline");
@@ -162,9 +160,7 @@ describe("saveBaseline", () => {
 		expect(octokit._mocks.createTree).toHaveBeenCalledTimes(1);
 		expect(octokit._mocks.createCommit).toHaveBeenCalledTimes(1);
 		expect(octokit._mocks.createRef).toHaveBeenCalledTimes(1);
-		expect(
-			octokit._mocks.createOrUpdateFileContents,
-		).toHaveBeenCalledTimes(1);
+		expect(octokit._mocks.createOrUpdateFileContents).toHaveBeenCalledTimes(1);
 	});
 
 	it("creates file on existing branch when file does not exist", async () => {
@@ -182,8 +178,6 @@ describe("saveBaseline", () => {
 
 		// Branch exists, so no orphan creation
 		expect(octokit._mocks.createTree).not.toHaveBeenCalled();
-		expect(
-			octokit._mocks.createOrUpdateFileContents,
-		).toHaveBeenCalledTimes(1);
+		expect(octokit._mocks.createOrUpdateFileContents).toHaveBeenCalledTimes(1);
 	});
 });
