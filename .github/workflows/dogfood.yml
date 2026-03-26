@@ -1,0 +1,43 @@
+name: Dogfood Coverage
+on:
+  pull_request:
+
+permissions:
+  pull-requests: write
+
+jobs:
+  coverage:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: oven-sh/setup-bun@v2
+        with:
+          bun-version: latest
+
+      # Generate head coverage
+      - run: bun install
+      - run: bun test --coverage --coverage-reporter=lcov
+      - run: cp coverage/lcov.info head.lcov
+
+      # Generate base coverage (may fail on first PR if base has no tests)
+      - uses: actions/checkout@v4
+        with:
+          ref: ${{ github.event.pull_request.base.sha }}
+          clean: false
+      - id: base-coverage
+        continue-on-error: true
+        run: bun install && bun test --coverage --coverage-reporter=lcov && cp coverage/lcov.info base.lcov
+
+      # Restore head
+      - uses: actions/checkout@v4
+        with:
+          clean: false
+
+      # Post coverage report
+      - uses: ./
+        with:
+          head-lcov-file: head.lcov
+          base-lcov-file: ${{ steps.base-coverage.outcome == 'success' && 'base.lcov' || '' }}
+          thresholds: "60 80"
+          show-badge: "true"
+          show-branch-coverage: "true"
