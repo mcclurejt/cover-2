@@ -1,4 +1,4 @@
-name: "Coverage Report"
+name: "Cover 2"
 description: "Parse LCOV coverage files and post a delta report as a PR comment"
 author: "mcclurejt"
 
