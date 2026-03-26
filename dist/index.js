@@ -44782,6 +44782,102 @@ function summarizeFiles(files) {
   return { files: fileMap, overall };
 }
 
+// src/github/baseline.ts
+var BASELINE_FILE = "baseline.lcov";
+async function saveBaseline(octokit, owner, repo, branch, lcovContent) {
+  const contentBase64 = Buffer.from(lcovContent).toString("base64");
+  const existingSha = await getFileSha(octokit, owner, repo, branch);
+  if (existingSha) {
+    await octokit.rest.repos.createOrUpdateFileContents({
+      owner,
+      repo,
+      path: BASELINE_FILE,
+      message: "chore: update coverage baseline",
+      content: contentBase64,
+      sha: existingSha,
+      branch
+    });
+  } else {
+    await ensureBranch(octokit, owner, repo, branch);
+    await octokit.rest.repos.createOrUpdateFileContents({
+      owner,
+      repo,
+      path: BASELINE_FILE,
+      message: "chore: update coverage baseline",
+      content: contentBase64,
+      branch
+    });
+  }
+}
+async function fetchBaseline(octokit, owner, repo, branch) {
+  try {
+    const { data } = await octokit.rest.repos.getContent({
+      owner,
+      repo,
+      path: BASELINE_FILE,
+      ref: branch
+    });
+    if ("content" in data && data.type === "file") {
+      return Buffer.from(data.content, "base64").toString("utf-8");
+    }
+    return null;
+  } catch (error) {
+    if (isNotFoundError(error)) {
+      return null;
+    }
+    throw error;
+  }
+}
+async function getFileSha(octokit, owner, repo, branch) {
+  try {
+    const { data } = await octokit.rest.repos.getContent({
+      owner,
+      repo,
+      path: BASELINE_FILE,
+      ref: branch
+    });
+    if ("sha" in data) {
+      return data.sha;
+    }
+    return null;
+  } catch (error) {
+    if (isNotFoundError(error)) {
+      return null;
+    }
+    throw error;
+  }
+}
+async function ensureBranch(octokit, owner, repo, branch) {
+  try {
+    await octokit.rest.repos.getBranch({ owner, repo, branch });
+  } catch (error) {
+    if (!isNotFoundError(error)) {
+      throw error;
+    }
+    const { data: tree } = await octokit.rest.git.createTree({
+      owner,
+      repo,
+      tree: []
+    });
+    const { data: commit } = await octokit.rest.git.createCommit({
+      owner,
+      repo,
+      message: "chore: initialize coverage baseline branch",
+      tree: tree.sha,
+      parents: []
+    });
+    await octokit.rest.git.createRef({
+      owner,
+      repo,
+      ref: `refs/heads/${branch}`,
+      sha: commit.sha
+    });
+  }
+}
+function isNotFoundError(error) {
+  return typeof error === "object" && error !== null && "status" in error && error.status === 404;
+}
+
 // src/github/comment.ts
 var MARKER_PREFIX = "<!-- coverage-report:";
 function getMarker(header) {
@@ -44830,6 +44926,8 @@ function parseInputs() {
   const showFunctionCoverage = core.getBooleanInput("show-function-coverage");
   const showUnchangedFiles = core.getBooleanInput("show-unchanged-files");
   const commentHeader = core.getInput("comment-header");
+  const saveBaseline2 = core.getInput("save-baseline");
+  const baselineFrom = core.getInput("baseline-from");
   const workingDirectory = core.getInput("working-directory");
   const thresholdsStr = core.getInput("thresholds");
   const thresholds = parseThresholds(thresholdsStr);
@@ -44844,6 +44942,8 @@ function parseInputs() {
     showFunctionCoverage,
     showUnchangedFiles,
     commentHeader,
+    saveBaseline: saveBaseline2,
+    baselineFrom,
     workingDirectory
   };
 }
@@ -45206,6 +45306,18 @@ async function run() {
       const baseContent = await resolveAndReadLcov(inputs.baseLcovFile, inputs.workingDirectory);
       const baseFiles = parseLcov(baseContent);
       baseSummary = summarizeFiles(baseFiles);
+    } else if (inputs.baselineFrom) {
+      const octokit = github.getOctokit(inputs.githubToken);
+      const { owner, repo } = github.context.repo;
+      core2.info(`Fetching baseline from branch: ${inputs.baselineFrom}`);
+      const baselineContent = await fetchBaseline(octokit, owner, repo, inputs.baselineFrom);
+      if (baselineContent) {
+        const baseFiles = parseLcov(baselineContent);
+        baseSummary = summarizeFiles(baseFiles);
+        core2.info("Baseline loaded successfully");
+      } else {
+        core2.info("No baseline found — skipping delta comparison. The baseline will be created after the first push to the default branch.");
+      }
     }
     const comparison = compareCoverage(headSummary, baseSummary);
     const report = generateReport(comparison, {
@@ -45231,6 +45343,13 @@ async function run() {
       core2.info(`Coverage comment posted (ID: ${commentId})`);
     } else {
       core2.info("Not a pull request event — skipping comment. Report is available in outputs.");
+    }
+    if (inputs.saveBaseline) {
+      const octokit = github.getOctokit(inputs.githubToken);
+      const { owner, repo } = github.context.repo;
+      core2.info(`Saving baseline to branch: ${inputs.saveBaseline}`);
+      await saveBaseline(octokit, owner, repo, inputs.saveBaseline, headContent);
+      core2.info("Baseline saved successfully");
     }
     core2.info(`Coverage: ${headSummary.overall.lineRate.toFixed(2)}% lines, ${headSummary.overall.branchRate.toFixed(2)}% branches`);
     if (inputs.failBelowThreshold) {
