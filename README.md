@@ -31,7 +31,7 @@ jobs:
     steps:
       - uses: actions/checkout@v4
       - run: npm test -- --coverage
-      - uses: mcclurejt/cover-2@v1
+      - uses: mcclurejt/cover-2@1.0.0
         with:
           head-lcov-file: coverage/lcov.info
 ```
@@ -60,14 +60,14 @@ jobs:
 
       # On PRs: post comment with delta from baseline
       - if: github.event_name == 'pull_request'
-        uses: mcclurejt/cover-2@v1
+        uses: mcclurejt/cover-2@1.0.0
         with:
           head-lcov-file: coverage/lcov.info
           baseline-from: coverage-baseline
 
       # On push to main: update the baseline
       - if: github.event_name == 'push'
-        uses: mcclurejt/cover-2@v1
+        uses: mcclurejt/cover-2@1.0.0
         with:
           head-lcov-file: coverage/lcov.info
           save-baseline: coverage-baseline
@@ -80,7 +80,7 @@ This creates an orphan branch called `coverage-baseline` that stores the LCOV fi
 You can also provide base/head LCOV files directly if you prefer:
 
 ```yaml
-- uses: mcclurejt/cover-2@v1
+- uses: mcclurejt/cover-2@1.0.0
   with:
     head-lcov-file: head.lcov
     base-lcov-file: base.lcov
@@ -147,7 +147,7 @@ The `thresholds` input controls both the health indicators and the optional fail
 ### Using Outputs
 
 ```yaml
-- uses: mcclurejt/cover-2@v1
+- uses: mcclurejt/cover-2@1.0.0
   id: coverage
   with:
     head-lcov-file: coverage/lcov.info
@@ -160,7 +160,7 @@ The `thresholds` input controls both the health indicators and the optional fail
 ### Monorepo with Multiple Coverage Files
 
 ```yaml
-- uses: mcclurejt/cover-2@v1
+- uses: mcclurejt/cover-2@1.0.0
   with:
     head-lcov-file: "packages/*/coverage/lcov.info"
     base-lcov-file: "base-coverage/*.lcov"
@@ -169,12 +169,12 @@ The `thresholds` input controls both the health indicators and the optional fail
 ### Separate Comments for Unit and Integration Tests
 
 ```yaml
-- uses: mcclurejt/cover-2@v1
+- uses: mcclurejt/cover-2@1.0.0
   with:
     head-lcov-file: coverage/unit/lcov.info
     comment-header: unit-tests
 
-- uses: mcclurejt/cover-2@v1
+- uses: mcclurejt/cover-2@1.0.0
   with:
     head-lcov-file: coverage/integration/lcov.info
     comment-header: integration-tests
@@ -183,7 +183,7 @@ The `thresholds` input controls both the health indicators and the optional fail
 ### Fail if Coverage Drops Below 80%
 
 ```yaml
-- uses: mcclurejt/cover-2@v1
+- uses: mcclurejt/cover-2@1.0.0
   with:
     head-lcov-file: coverage/lcov.info
     thresholds: "80 90"
@@ -193,7 +193,7 @@ The `thresholds` input controls both the health indicators and the optional fail
 ### Minimal — No Badge, No Branch Coverage
 
 ```yaml
-- uses: mcclurejt/cover-2@v1
+- uses: mcclurejt/cover-2@1.0.0
   with:
     head-lcov-file: coverage/lcov.info
     show-badge: "false"
