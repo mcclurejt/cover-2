@@ -19,8 +19,9 @@ pids
 lib-cov
 
 # Coverage directory used by tools like istanbul
-coverage
+/coverage
 *.lcov
+!__tests__/fixtures/*.lcov
 
 # nyc test coverage
 .nyc_output
@@ -80,7 +81,8 @@ out
 
 # Nuxt.js build / generate output
 .nuxt
-dist
+# Note: dist/ is intentionally tracked for the GitHub Action bundle
+# dist
 
 # Gatsby files
 .cache/

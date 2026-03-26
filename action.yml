@@ -1,0 +1,92 @@
+name: "Coverage Report"
+description: "Parse LCOV coverage files and post a delta report as a PR comment"
+author: "mcclurejt"
+
+branding:
+  icon: bar-chart-2
+  color: green
+
+inputs:
+  head-lcov-file:
+    description: >
+      Path to the LCOV coverage file from the PR/head branch.
+      Supports glob patterns (e.g., "coverage/*.lcov").
+    required: true
+
+  base-lcov-file:
+    description: >
+      Path to the LCOV coverage file from the base/target branch.
+      If not provided, no delta column will be shown.
+    required: false
+    default: ""
+
+  github-token:
+    description: "GitHub token for posting PR comments. Defaults to the built-in GITHUB_TOKEN."
+    required: false
+    default: ${{ github.token }}
+
+  thresholds:
+    description: >
+      Two space-separated percentages: "lower upper" (e.g., "60 80").
+      Below lower = failure indicator, between = warning, above upper = success.
+    required: false
+    default: "60 80"
+
+  fail-below-threshold:
+    description: "Fail the action if overall line coverage is below the lower threshold."
+    required: false
+    default: "false"
+
+  show-badge:
+    description: "Include a shields.io coverage badge in the comment."
+    required: false
+    default: "true"
+
+  show-branch-coverage:
+    description: "Show branch coverage column in the table."
+    required: false
+    default: "true"
+
+  show-function-coverage:
+    description: "Show function coverage column in the table."
+    required: false
+    default: "false"
+
+  show-unchanged-files:
+    description: >
+      Show files that exist in both base and head but have no coverage change.
+      When false (default), only files with coverage deltas or new/removed files are shown.
+    required: false
+    default: "false"
+
+  comment-header:
+    description: >
+      A unique identifier for the comment. Allows multiple instances of this
+      action to post separate comments on the same PR.
+    required: false
+    default: "coverage"
+
+  working-directory:
+    description: "Working directory for resolving relative file paths."
+    required: false
+    default: "."
+
+outputs:
+  total-line-rate:
+    description: "Overall line coverage percentage (0-100) for the head branch."
+
+  total-branch-rate:
+    description: "Overall branch coverage percentage (0-100) for the head branch."
+
+  total-line-rate-delta:
+    description: "Change in overall line coverage compared to base branch."
+
+  comment-id:
+    description: "ID of the created or updated PR comment."
+
+  report:
+    description: "The full Markdown report as a string."
+
+runs:
+  using: node20
+  main: dist/index.js
