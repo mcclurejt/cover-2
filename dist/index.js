@@ -44854,23 +44854,20 @@ async function ensureBranch(octokit, owner, repo, branch) {
     if (!isNotFoundError(error)) {
       throw error;
     }
-    const { data: tree } = await octokit.rest.git.createTree({
+    const { data: repoData } = await octokit.rest.repos.get({
       owner,
-      repo,
-      tree: []
+      repo
     });
-    const { data: commit } = await octokit.rest.git.createCommit({
+    const { data: ref } = await octokit.rest.git.getRef({
       owner,
       repo,
-      message: "chore: initialize coverage baseline branch",
-      tree: tree.sha,
-      parents: []
+      ref: `heads/${repoData.default_branch}`
     });
     await octokit.rest.git.createRef({
       owner,
       repo,
       ref: `refs/heads/${branch}`,
-      sha: commit.sha
+      sha: ref.object.sha
     });
   }
 }
