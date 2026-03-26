@@ -20,9 +20,9 @@ function createMockOctokit({
 		if (getBranchError) return Promise.reject(getBranchError);
 		return Promise.resolve({ data: { name: "coverage-baseline" } });
 	});
-	const createTree = mock(() => Promise.resolve({ data: { sha: "tree-sha" } }));
-	const createCommit = mock(() =>
-		Promise.resolve({ data: { sha: "commit-sha" } }),
+	const get = mock(() => Promise.resolve({ data: { default_branch: "main" } }));
+	const getRef = mock(() =>
+		Promise.resolve({ data: { object: { sha: "main-sha" } } }),
 	);
 	const createRef = mock(() => Promise.resolve());
 
@@ -32,10 +32,10 @@ function createMockOctokit({
 				createOrUpdateFileContents,
 				getContent,
 				getBranch,
+				get,
 			},
 			git: {
-				createTree,
-				createCommit,
+				getRef,
 				createRef,
 			},
 		},
@@ -43,8 +43,8 @@ function createMockOctokit({
 			createOrUpdateFileContents,
 			getContent,
 			getBranch,
-			createTree,
-			createCommit,
+			get,
+			getRef,
 			createRef,
 		},
 	} as unknown as ReturnType<typeof createMockOctokit> & {
@@ -143,7 +143,7 @@ describe("saveBaseline", () => {
 		expect(args.branch).toBe("coverage-baseline");
 	});
 
-	it("creates orphan branch and file when branch does not exist", async () => {
+	it("creates branch and file when branch does not exist", async () => {
 		const octokit = createMockOctokit({
 			getContentError: { status: 404 },
 			getBranchError: { status: 404 },
@@ -157,8 +157,9 @@ describe("saveBaseline", () => {
 			"new content",
 		);
 
-		expect(octokit._mocks.createTree).toHaveBeenCalledTimes(1);
-		expect(octokit._mocks.createCommit).toHaveBeenCalledTimes(1);
+		// Should get default branch info and create ref
+		expect(octokit._mocks.get).toHaveBeenCalledTimes(1);
+		expect(octokit._mocks.getRef).toHaveBeenCalledTimes(1);
 		expect(octokit._mocks.createRef).toHaveBeenCalledTimes(1);
 		expect(octokit._mocks.createOrUpdateFileContents).toHaveBeenCalledTimes(1);
 	});
@@ -176,8 +177,8 @@ describe("saveBaseline", () => {
 			"new content",
 		);
 
-		// Branch exists, so no orphan creation
-		expect(octokit._mocks.createTree).not.toHaveBeenCalled();
+		// Branch exists, so no branch creation
+		expect(octokit._mocks.createRef).not.toHaveBeenCalled();
 		expect(octokit._mocks.createOrUpdateFileContents).toHaveBeenCalledTimes(1);
 	});
 });

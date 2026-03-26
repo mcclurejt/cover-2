@@ -97,8 +97,8 @@ async function getFileSha(
 }
 
 /**
- * Ensure the baseline branch exists. Creates an orphan branch with an
- * empty initial commit if it doesn't exist.
+ * Ensure the baseline branch exists. Creates it from the default
+ * branch HEAD if it doesn't exist.
  */
 async function ensureBranch(
 	octokit: Octokit,
@@ -113,29 +113,22 @@ async function ensureBranch(
 			throw error;
 		}
 
-		// Create orphan branch via the Git Data API:
-		// 1. Create an empty tree
-		const { data: tree } = await octokit.rest.git.createTree({
+		// Get the default branch HEAD to base our new branch on
+		const { data: repoData } = await octokit.rest.repos.get({
 			owner,
 			repo,
-			tree: [],
 		});
-
-		// 2. Create a commit with no parents (orphan)
-		const { data: commit } = await octokit.rest.git.createCommit({
+		const { data: ref } = await octokit.rest.git.getRef({
 			owner,
 			repo,
-			message: "chore: initialize coverage baseline branch",
-			tree: tree.sha,
-			parents: [],
+			ref: `heads/${repoData.default_branch}`,
 		});
 
-		// 3. Create the ref
 		await octokit.rest.git.createRef({
 			owner,
 			repo,
 			ref: `refs/heads/${branch}`,
-			sha: commit.sha,
+			sha: ref.object.sha,
 		});
 	}
 }
