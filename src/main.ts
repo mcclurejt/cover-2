@@ -5,6 +5,7 @@ import * as github from "@actions/github";
 import * as glob from "@actions/glob";
 import { compareCoverage } from "./coverage/compare.js";
 import { summarizeFiles } from "./coverage/summarize.js";
+import { fetchBaseline, saveBaseline } from "./github/baseline.js";
 import { upsertComment } from "./github/comment.js";
 import { parseInputs } from "./inputs.js";
 import { parseLcov } from "./lcov/parse.js";
@@ -43,6 +44,7 @@ export async function run(): Promise<void> {
 		const headSummary = summarizeFiles(headFiles);
 
 		// Parse base coverage (optional)
+		// Priority: base-lcov-file > baseline-from
 		let baseSummary = null;
 		if (inputs.baseLcovFile) {
 			const baseContent = await resolveAndReadLcov(
@@ -51,6 +53,27 @@ export async function run(): Promise<void> {
 			);
 			const baseFiles = parseLcov(baseContent);
 			baseSummary = summarizeFiles(baseFiles);
+		} else if (inputs.baselineFrom) {
+			const octokit = github.getOctokit(inputs.githubToken);
+			const { owner, repo } = github.context.repo;
+			core.info(
+				`Fetching baseline from branch: ${inputs.baselineFrom}`,
+			);
+			const baselineContent = await fetchBaseline(
+				octokit,
+				owner,
+				repo,
+				inputs.baselineFrom,
+			);
+			if (baselineContent) {
+				const baseFiles = parseLcov(baselineContent);
+				baseSummary = summarizeFiles(baseFiles);
+				core.info("Baseline loaded successfully");
+			} else {
+				core.info(
+					"No baseline found — skipping delta comparison. The baseline will be created after the first push to the default branch.",
+				);
+			}
 		}
 
 		// Compare
@@ -99,6 +122,23 @@ export async function run(): Promise<void> {
 			core.info(
 				"Not a pull request event — skipping comment. Report is available in outputs.",
 			);
+		}
+
+		// Save baseline
+		if (inputs.saveBaseline) {
+			const octokit = github.getOctokit(inputs.githubToken);
+			const { owner, repo } = github.context.repo;
+			core.info(
+				`Saving baseline to branch: ${inputs.saveBaseline}`,
+			);
+			await saveBaseline(
+				octokit,
+				owner,
+				repo,
+				inputs.saveBaseline,
+				headContent,
+			);
+			core.info("Baseline saved successfully");
 		}
 
 		// Log summary

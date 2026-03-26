@@ -66,6 +66,22 @@ inputs:
     required: false
     default: "coverage"
 
+  save-baseline:
+    description: >
+      Branch name to save the head LCOV file to as a baseline for future PRs.
+      Creates an orphan branch if it doesn't exist. Typically used on push to the
+      default branch (e.g., after a PR merge).
+    required: false
+    default: ""
+
+  baseline-from:
+    description: >
+      Branch name to fetch the baseline LCOV file from for delta comparison.
+      When set, overrides base-lcov-file. The baseline is fetched via the GitHub
+      API — no checkout required.
+    required: false
+    default: ""
+
   working-directory:
     description: "Working directory for resolving relative file paths."
     required: false

@@ -13,6 +13,7 @@ A GitHub Action that parses LCOV coverage files and posts a coverage report as a
 - **Shields.io badge** — optional coverage badge in the comment
 - **Glob support** — match multiple coverage files (e.g. monorepo with `packages/*/coverage/lcov.info`)
 - **Multiple instances** — use `comment-header` to post separate comments for unit tests, integration tests, etc.
+- **Baseline storage** — automatically save and retrieve coverage baselines via a dedicated git branch — no checkout dance required
 
 ## Quick Start
 
@@ -35,16 +36,19 @@ jobs:
           head-lcov-file: coverage/lcov.info
 ```
 
-## Usage with Deltas
+## Usage with Deltas (Recommended)
 
-To show coverage deltas, provide LCOV files from both the base and head branches:
+The easiest way to get coverage deltas is with **baseline storage**. The action saves a coverage snapshot to a dedicated branch on every push to main, then automatically fetches it for comparison on PRs.
 
 ```yaml
 name: Coverage
 on:
+  push:
+    branches: [main]
   pull_request:
 
 permissions:
+  contents: write
   pull-requests: write
 
 jobs:
@@ -52,31 +56,34 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
-      - run: npm install
-
-      # Generate head coverage
       - run: npm test -- --coverage
-      - run: cp coverage/lcov.info head.lcov
 
-      # Generate base coverage
-      - uses: actions/checkout@v4
+      # On PRs: post comment with delta from baseline
+      - if: github.event_name == 'pull_request'
+        uses: mcclurejt/cover-2@v1
         with:
-          ref: ${{ github.event.pull_request.base.sha }}
-          clean: false
-      - run: npm install
-      - run: npm test -- --coverage
-      - run: cp coverage/lcov.info base.lcov
+          head-lcov-file: coverage/lcov.info
+          baseline-from: coverage-baseline
 
-      # Restore head
-      - uses: actions/checkout@v4
+      # On push to main: update the baseline
+      - if: github.event_name == 'push'
+        uses: mcclurejt/cover-2@v1
         with:
-          clean: false
+          head-lcov-file: coverage/lcov.info
+          save-baseline: coverage-baseline
+```
 
-      # Post coverage report with deltas
-      - uses: mcclurejt/cover-2@v1
-        with:
-          head-lcov-file: head.lcov
-          base-lcov-file: base.lcov
+This creates an orphan branch called `coverage-baseline` that stores the LCOV file. No checkout dance, no re-running tests against the base branch.
+
+### Manual Deltas
+
+You can also provide base/head LCOV files directly if you prefer:
+
+```yaml
+- uses: mcclurejt/cover-2@v1
+  with:
+    head-lcov-file: head.lcov
+    base-lcov-file: base.lcov
 ```
 
 ### Example Output
@@ -105,6 +112,8 @@ Files with no coverage change are collapsed by default into a `<details>` sectio
 |---|---|---|---|
 | `head-lcov-file` | **yes** | — | Path or glob to LCOV file(s) from the PR branch |
 | `base-lcov-file` | no | `""` | Path or glob to LCOV file(s) from the base branch. Enables the delta column |
+| `baseline-from` | no | `""` | Branch name to fetch baseline LCOV from for delta comparison (overrides `base-lcov-file`) |
+| `save-baseline` | no | `""` | Branch name to save the head LCOV to as a baseline for future PRs |
 | `github-token` | no | `${{ github.token }}` | Token for posting PR comments |
 | `thresholds` | no | `"60 80"` | Space-separated lower and upper thresholds for health indicators |
 | `fail-below-threshold` | no | `"false"` | Fail the action if line coverage is below the lower threshold |
@@ -197,10 +206,18 @@ When triggered by a non-PR event (e.g. `push`), the action skips commenting but 
 
 ## Permissions
 
-The action needs `pull-requests: write` to create/update PR comments:
+For PR comments only:
 
 ```yaml
 permissions:
+  pull-requests: write
+```
+
+For baseline storage (recommended):
+
+```yaml
+permissions:
+  contents: write
   pull-requests: write
 ```
 

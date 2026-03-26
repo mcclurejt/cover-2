@@ -12,6 +12,8 @@ export interface ActionInputs {
 	showFunctionCoverage: boolean;
 	showUnchangedFiles: boolean;
 	commentHeader: string;
+	saveBaseline: string;
+	baselineFrom: string;
 	workingDirectory: string;
 }
 
@@ -25,6 +27,8 @@ export function parseInputs(): ActionInputs {
 	const showFunctionCoverage = core.getBooleanInput("show-function-coverage");
 	const showUnchangedFiles = core.getBooleanInput("show-unchanged-files");
 	const commentHeader = core.getInput("comment-header");
+	const saveBaseline = core.getInput("save-baseline");
+	const baselineFrom = core.getInput("baseline-from");
 	const workingDirectory = core.getInput("working-directory");
 
 	const thresholdsStr = core.getInput("thresholds");
@@ -41,6 +45,8 @@ export function parseInputs(): ActionInputs {
 		showFunctionCoverage,
 		showUnchangedFiles,
 		commentHeader,
+		saveBaseline,
+		baselineFrom,
 		workingDirectory,
 	};
 }
